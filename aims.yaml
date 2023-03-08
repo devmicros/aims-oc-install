@@ -1,0 +1,1045 @@
+apiVersion: "v1"
+items:
+- apiVersion: "v1"
+  kind: "PersistentVolumeClaim"
+  metadata:
+    name: "aims-db-storage"
+  spec:
+    accessModes:
+    - "ReadWriteOnce"
+    resources:
+      requests:
+        storage: "1Gi"
+    claimRef: 
+      namespace: default
+      name: my-claim
+    securityContext:
+      supplementalGroups: [supp-group]
+  volumeBindingMode: Immediate
+- apiVersion: "v1"
+  kind: "PersistentVolumeClaim"
+  metadata:
+    name: "aims-init-storage"
+  spec:
+    accessModes:
+    - "ReadWriteOnce"
+    resources:
+      requests:
+        storage: "1Gi"
+    claimRef: 
+      namespace: default
+      name: my-claim
+    securityContext:
+      supplementalGroups: [supp-group]
+  volumeBindingMode: Immediate
+- apiVersion: "v1"
+  kind: "PersistentVolumeClaim"
+  metadata:
+    name: "comm-db-storage"
+  spec:
+    accessModes:
+    - "ReadWriteOnce"
+    resources:
+      requests:
+        storage: "1Gi"
+    claimRef: 
+      namespace: default
+      name: my-claim
+    securityContext:
+      supplementalGroups: [supp-group]
+  volumeBindingMode: Immediate
+- apiVersion: "v1"
+  kind: "PersistentVolumeClaim"
+  metadata:
+    name: "comm-init-storage"
+  spec:
+    accessModes:
+    - "ReadWriteOnce"
+    resources:
+      requests:
+        storage: "1Gi"
+    claimRef: 
+      namespace: default
+      name: my-claim
+    securityContext:
+      supplementalGroups: [supp-group]
+  volumeBindingMode: Immediate
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      deployment.kubernetes.io/revision: "1"
+    creationTimestamp: "2023-01-25T23:43:33Z"
+    generation: 5
+    name: aims-db
+    namespace:  app-name
+    resourceVersion: "131508591"
+    uid: b9895eb8-d4a4-486d-af6f-65f9d893ecf5
+  spec:
+    progressDeadlineSeconds: 600
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        app: aims-db
+    strategy:
+      rollingUpdate:
+        maxSurge: 25%
+        maxUnavailable: 25%
+      type: RollingUpdate
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          app: aims-db
+      spec:
+        containers:
+        - env:
+          - name: POSTGRESQL_DATABASE
+            value: aims
+          - name: POSTGRESQL_PASSWORD
+            value: microsafe.2022
+          - name: POSTGRESQL_EXTRA_FLAGS
+            value: --max_connections=600 --shared_buffers=80MB
+          image: hdongx/aims-db@sha256:d1009cd612d38b7ad3820f390f533eb641744244122683f1802a82ce1e215a55
+          imagePullPolicy: IfNotPresent
+          name: aims-db
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            seccompProfile:
+              type: RuntimeDefault
+          ports:
+          - containerPort: 5432
+            protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /docker-entrypoint-preinitdb.d
+            name: aims-db-3
+          - mountPath: /docker-entrypoint-initdb.d
+            name: aims-db-2
+          - mountPath: /bitnami/postgresql
+            name: aims-db-1
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        terminationGracePeriodSeconds: 30
+        securityContext:
+          supplementalGroups: [supp-group]
+        volumes:
+        - emptyDir: {}
+          name: aims-db-3
+        - name: aims-db-2
+          persistentVolumeClaim:
+            claimName: aims-init-storage
+        - name: aims-db-1
+          persistentVolumeClaim:
+            claimName: aims-db-storage
+        - emptyDir: {}
+          name: default-token-l4tgm
+  status:
+    availableReplicas: 1
+    conditions:
+    - lastTransitionTime: "2023-01-25T23:43:33Z"
+      lastUpdateTime: "2023-01-25T23:43:50Z"
+      message: ReplicaSet "aims-db-849ccd54b8" has successfully progressed.
+      reason: NewReplicaSetAvailable
+      status: "True"
+      type: Progressing
+    - lastTransitionTime: "2023-02-24T00:41:05Z"
+      lastUpdateTime: "2023-02-24T00:41:05Z"
+      message: Deployment has minimum availability.
+      reason: MinimumReplicasAvailable
+      status: "True"
+      type: Available
+    observedGeneration: 5
+    readyReplicas: 1
+    replicas: 1
+    updatedReplicas: 1
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      deployment.kubernetes.io/revision: "4"
+    creationTimestamp: "2023-01-25T23:43:33Z"
+    generation: 4
+    name: aims-gql
+    namespace:  app-name
+    resourceVersion: "131506373"
+    uid: ccdae779-f572-4915-b975-46e346cafed8
+  spec:
+    progressDeadlineSeconds: 600
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        app: aims-gql
+    strategy:
+      rollingUpdate:
+        maxSurge: 25%
+        maxUnavailable: 25%
+      type: RollingUpdate
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          app: aims-gql
+      spec:
+        containers:
+        - env:
+          - name: DATABASE_URL
+            value: postgres://postgres:microsafe.2022@aims-db/aims
+          image: hdongx/aims-gql@sha256:a5abf892caa165ec2a309d050490012682bdffed93ed00fba6412431ad0ab726
+          imagePullPolicy: IfNotPresent
+          name: aims-gql
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            seccompProfile:
+              type: RuntimeDefault
+          ports:
+          - containerPort: 5000
+            protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        terminationGracePeriodSeconds: 30
+        securityContext:
+          supplementalGroups: [supp-group]
+  status:
+    availableReplicas: 1
+    conditions:
+    - lastTransitionTime: "2023-01-26T01:04:54Z"
+      lastUpdateTime: "2023-01-26T01:04:54Z"
+      message: Deployment has minimum availability.
+      reason: MinimumReplicasAvailable
+      status: "True"
+      type: Available
+    - lastTransitionTime: "2023-01-25T23:43:33Z"
+      lastUpdateTime: "2023-02-24T00:37:45Z"
+      message: ReplicaSet "aims-gql-54864954c7" has successfully progressed.
+      reason: NewReplicaSetAvailable
+      status: "True"
+      type: Progressing
+    observedGeneration: 4
+    readyReplicas: 1
+    replicas: 1
+    updatedReplicas: 1
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      deployment.kubernetes.io/revision: "9"
+    creationTimestamp: "2023-01-25T23:43:34Z"
+    generation: 11
+    name: aims-http
+    namespace:  app-name
+    resourceVersion: "132695496"
+    uid: d5e20a54-f7e0-4903-8ba2-7b93d48191d8
+  spec:
+    progressDeadlineSeconds: 600
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        app: aims-http
+    strategy:
+      rollingUpdate:
+        maxSurge: 25%
+        maxUnavailable: 25%
+      type: RollingUpdate
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          app: aims-http
+      spec:
+        containers:
+        - env:
+          - name: ENV_GPHQL_HTTP
+            value: http
+          - name: ENV_GPHQL_HOST
+            value: aims-gql.microsafe.com.mx
+          - name: ENV_GPHQL_PORT
+          - name: ENV_APPWS_HTTP
+            value: http
+          - name: ENV_APPWS_HOST
+            value: aims-ws.microsafe.com.mx
+          - name: ENV_APPWS_PORT
+          - name: ENV_APP_VERSION
+            value: "8081"
+          image: hdongx/aims-html@sha256:dc6c8850922e211e007860c0e68d3fabd804fee6496f4085192a29f4048c7fcd
+          imagePullPolicy: IfNotPresent
+          name: aims-http
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            seccompProfile:
+              type: RuntimeDefault
+          ports:
+          - containerPort: 8080
+            protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        terminationGracePeriodSeconds: 30
+        securityContext:
+          supplementalGroups: [supp-group]
+  status:
+    availableReplicas: 1
+    conditions:
+    - lastTransitionTime: "2023-02-24T16:32:32Z"
+      lastUpdateTime: "2023-02-24T16:32:32Z"
+      message: Deployment has minimum availability.
+      reason: MinimumReplicasAvailable
+      status: "True"
+      type: Available
+    - lastTransitionTime: "2023-01-25T23:43:34Z"
+      lastUpdateTime: "2023-02-24T16:50:46Z"
+      message: ReplicaSet "aims-http-c8b4fc869" has successfully progressed.
+      reason: NewReplicaSetAvailable
+      status: "True"
+      type: Progressing
+    observedGeneration: 11
+    readyReplicas: 1
+    replicas: 1
+    updatedReplicas: 1
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      deployment.kubernetes.io/revision: "4"
+    creationTimestamp: "2023-01-25T23:43:34Z"
+    generation: 4
+    name: aims-ws
+    namespace:  app-name
+    resourceVersion: "132621923"
+    uid: e92796f8-1a6a-4dad-89c7-70543d28f7d4
+  spec:
+    progressDeadlineSeconds: 600
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        app: aims-ws
+    strategy:
+      rollingUpdate:
+        maxSurge: 25%
+        maxUnavailable: 25%
+      type: RollingUpdate
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          app: aims-ws
+      spec:
+        containers:
+        - env:
+          - name: APPWS_PORT
+            value: "8081"
+          - name: GRAPHQL_HTTP
+            value: http
+          - name: GRAPHQL_HOST
+            value: aims-gql
+          - name: GRAPHQL_PORT
+            value: "5000"
+          - name: POSTGRESQL_HOST
+            value: aims-db
+          - name: POSTGRESQL_PORT
+            value: "5432"
+          - name: POSTGRESQL_DATABASE
+            value: aims
+          - name: POSTGRESQL_USER
+            value: postgres
+          - name: POSTGRESQL_PASSWORD
+            value: microsafe.2022
+          - name: SS_KEY
+            value: Microsafe01
+          - name: SS_IV
+            value: Microsafe02
+          - name: APPWEB_HTTP
+            value: http
+          - name: APPWEB_HOST
+            value: aims-http.microsafe.com.mx
+          - name: APPWEB_PORT
+          image: hdongx/aims-ws@sha256:9fd288468a1a63411900eaeb775126fe0d6025f54e41e7df298c1c0daaab9b7c
+          imagePullPolicy: IfNotPresent
+          name: aims-ws
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            seccompProfile:
+              type: RuntimeDefault
+          ports:
+          - containerPort: 8081
+            protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        terminationGracePeriodSeconds: 30
+        securityContext:
+          supplementalGroups: [supp-group]
+  status:
+    availableReplicas: 1
+    conditions:
+    - lastTransitionTime: "2023-01-25T23:43:40Z"
+      lastUpdateTime: "2023-01-25T23:43:40Z"
+      message: Deployment has minimum availability.
+      reason: MinimumReplicasAvailable
+      status: "True"
+      type: Available
+    - lastTransitionTime: "2023-01-25T23:43:34Z"
+      lastUpdateTime: "2023-02-24T16:06:40Z"
+      message: ReplicaSet "aims-ws-79557fdb68" has successfully progressed.
+      reason: NewReplicaSetAvailable
+      status: "True"
+      type: Progressing
+    observedGeneration: 4
+    readyReplicas: 1
+    replicas: 1
+    updatedReplicas: 1
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      deployment.kubernetes.io/revision: "1"
+    creationTimestamp: "2023-01-25T23:43:34Z"
+    generation: 1
+    name: comm-db
+    namespace:  app-name
+    resourceVersion: "78747856"
+    uid: 6172ba01-8f4c-4688-8c96-04026d3a328d
+  spec:
+    progressDeadlineSeconds: 600
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        app: comm-db
+    strategy:
+      rollingUpdate:
+        maxSurge: 25%
+        maxUnavailable: 25%
+      type: RollingUpdate
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          app: comm-db
+      spec:
+        containers:
+        - env:
+          - name: POSTGRESQL_DATABASE
+            value: aimsdata
+          - name: POSTGRESQL_PASSWORD
+            value: microsafe.2022
+          - name: POSTGRESQL_EXTRA_FLAGS
+            value: --max_connections=600 --shared_buffers=80MB
+          image: hdongx/comm-db@sha256:72e7cf5d4f541cf8167bc55c09d51b8ae9d7e61b8ebec844eca7ab61078f417e
+          imagePullPolicy: IfNotPresent
+          name: comm-db
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            seccompProfile:
+              type: RuntimeDefault
+          ports:
+          - containerPort: 5432
+            protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /docker-entrypoint-preinitdb.d
+            name: comm-db-3
+          - mountPath: /docker-entrypoint-initdb.d
+            name: comm-db-2
+          - mountPath: /bitnami/postgresql
+            name: comm-db-1
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        terminationGracePeriodSeconds: 30
+        securityContext:
+          supplementalGroups: [supp-group]
+        volumes:
+        - emptyDir: {}
+          name: comm-db-3
+        - name: comm-db-2
+          persistentVolumeClaim:
+            claimName: comm-init-storage
+        - name: comm-db-1
+          persistentVolumeClaim:
+            claimName: comm-db-storage
+        - emptyDir: {}
+          name: default-token-l4tgm
+  status:
+    availableReplicas: 1
+    conditions:
+    - lastTransitionTime: "2023-01-25T23:43:34Z"
+      lastUpdateTime: "2023-01-25T23:43:50Z"
+      message: ReplicaSet "comm-db-77f7d956f9" has successfully progressed.
+      reason: NewReplicaSetAvailable
+      status: "True"
+      type: Progressing
+    - lastTransitionTime: "2023-01-26T00:59:14Z"
+      lastUpdateTime: "2023-01-26T00:59:14Z"
+      message: Deployment has minimum availability.
+      reason: MinimumReplicasAvailable
+      status: "True"
+      type: Available
+    observedGeneration: 1
+    readyReplicas: 1
+    replicas: 1
+    updatedReplicas: 1
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      deployment.kubernetes.io/revision: "3"
+    creationTimestamp: "2023-01-25T23:43:34Z"
+    generation: 3
+    name: comm-gql
+    namespace:  app-name
+    resourceVersion: "131510561"
+    uid: 6c95574d-7f61-4ffb-a375-0d08ba334d45
+  spec:
+    progressDeadlineSeconds: 600
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        app: comm-gql
+    strategy:
+      rollingUpdate:
+        maxSurge: 25%
+        maxUnavailable: 25%
+      type: RollingUpdate
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          app: comm-gql
+      spec:
+        containers:
+        - env:
+          - name: DATABASE_URL
+            value: postgres://postgres:microsafe.2022@comm-db:5432/aimsdata
+          image: hdongx/comm-gql@sha256:409bbc32d3a577f3689f450fbdedcfdd3a084591bfa5091052390da4c44f1907
+          imagePullPolicy: IfNotPresent
+          name: comm-gql
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            seccompProfile:
+              type: RuntimeDefault
+          ports:
+          - containerPort: 5000
+            protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        terminationGracePeriodSeconds: 30
+        securityContext:
+          supplementalGroups: [supp-group]
+  status:
+    availableReplicas: 1
+    conditions:
+    - lastTransitionTime: "2023-01-26T01:05:36Z"
+      lastUpdateTime: "2023-01-26T01:05:36Z"
+      message: Deployment has minimum availability.
+      reason: MinimumReplicasAvailable
+      status: "True"
+      type: Available
+    - lastTransitionTime: "2023-01-25T23:43:34Z"
+      lastUpdateTime: "2023-02-24T00:44:09Z"
+      message: ReplicaSet "comm-gql-554b7d86c" has successfully progressed.
+      reason: NewReplicaSetAvailable
+      status: "True"
+      type: Progressing
+    observedGeneration: 3
+    readyReplicas: 1
+    replicas: 1
+    updatedReplicas: 1
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      deployment.kubernetes.io/revision: "3"
+    creationTimestamp: "2023-01-25T23:43:34Z"
+    generation: 3
+    name: comm-ws
+    namespace:  app-name
+    resourceVersion: "131516111"
+    uid: ff7dee84-7ac7-4897-8267-545e66273c0e
+  spec:
+    progressDeadlineSeconds: 600
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        app: comm-ws
+    strategy:
+      rollingUpdate:
+        maxSurge: 25%
+        maxUnavailable: 25%
+      type: RollingUpdate
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          app: comm-ws
+      spec:
+        containers:
+        - env:
+          - name: COMMWS_PORT
+            value: "9000"
+          - name: GRAPHQL_URL
+            value: http://comm-gql:5000
+          - name: POSTGRESQL_HOST
+            value: comm-db
+          - name: POSTGRESQL_PORT
+            value: "5432"
+          - name: POSTGRESQL_DATABASE
+            value: aimsdata
+          - name: POSTGRESQL_USER
+            value: postgres
+          - name: POSTGRESQL_PASSWORD
+            value: microsafe.2022
+          image: hdongx/comm-ws@sha256:09fb32f877bf20ace031321eeacb507c857551184351220a22671e56d32a4e46
+          imagePullPolicy: IfNotPresent
+          name: comm-ws
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            seccompProfile:
+              type: RuntimeDefault
+          ports:
+          - containerPort: 9000
+            protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        terminationGracePeriodSeconds: 30
+        securityContext:
+          supplementalGroups: [supp-group]
+  status:
+    availableReplicas: 1
+    conditions:
+    - lastTransitionTime: "2023-01-25T23:43:42Z"
+      lastUpdateTime: "2023-01-25T23:43:42Z"
+      message: Deployment has minimum availability.
+      reason: MinimumReplicasAvailable
+      status: "True"
+      type: Available
+    - lastTransitionTime: "2023-01-25T23:43:34Z"
+      lastUpdateTime: "2023-02-24T00:52:52Z"
+      message: ReplicaSet "comm-ws-7d884465cb" has successfully progressed.
+      reason: NewReplicaSetAvailable
+      status: "True"
+      type: Progressing
+    observedGeneration: 3
+    readyReplicas: 1
+    replicas: 1
+    updatedReplicas: 1
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      deployment.kubernetes.io/revision: "3"
+    creationTimestamp: "2023-01-25T23:43:34Z"
+    generation: 3
+    name: data-ws
+    namespace:  app-name
+    resourceVersion: "131516562"
+    uid: 66fc99dd-0d25-42cf-b376-e9a41405bbb9
+  spec:
+    progressDeadlineSeconds: 600
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        app: data-ws
+    strategy:
+      rollingUpdate:
+        maxSurge: 25%
+        maxUnavailable: 25%
+      type: RollingUpdate
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          app: data-ws
+      spec:
+        containers:
+        - env:
+          - name: DATAWS_TIMER
+            value: "10"
+          - name: GRAPHQL_URL
+            value: http://comm-gql:5000
+          - name: POSTGRESQL_HOST
+            value: comm-db
+          - name: POSTGRESQL_PORT
+            value: "5432"
+          - name: POSTGRESQL_DATABASE
+            value: aimsdata
+          - name: POSTGRESQL_USER
+            value: postgres
+          - name: POSTGRESQL_PASSWORD
+            value: microsafe.2022
+          image: hdongx/data-ws@sha256:5c0f79d9a3b8b9e66b642d6eeafa32910f7ff5b26a3787c207feca4fa7921ef1
+          imagePullPolicy: IfNotPresent
+          name: data-ws
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            seccompProfile:
+              type: RuntimeDefault
+          ports:
+          - containerPort: 9001
+            protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        terminationGracePeriodSeconds: 30
+        securityContext:
+          supplementalGroups: [supp-group]
+  status:
+    availableReplicas: 1
+    conditions:
+    - lastTransitionTime: "2023-01-25T23:43:40Z"
+      lastUpdateTime: "2023-01-25T23:43:40Z"
+      message: Deployment has minimum availability.
+      reason: MinimumReplicasAvailable
+      status: "True"
+      type: Available
+    - lastTransitionTime: "2023-01-25T23:43:34Z"
+      lastUpdateTime: "2023-02-24T00:53:31Z"
+      message: ReplicaSet "data-ws-9cd57757f" has successfully progressed.
+      reason: NewReplicaSetAvailable
+      status: "True"
+      type: Progressing
+    observedGeneration: 3
+    readyReplicas: 1
+    replicas: 1
+    updatedReplicas: 1
+- apiVersion: v1
+  kind: Service
+  metadata:
+    creationTimestamp: "2023-02-24T00:37:02Z"
+    name: aims-db
+    namespace: app-name
+    resourceVersion: "131505847"
+    uid: 7cfb7cb7-c09d-45df-a344-e65450607031
+  spec:
+    clusterIP: 172.30.66.58
+    clusterIPs:
+    - 172.30.66.58
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - port: 5432
+      protocol: TCP
+      targetPort: 5432
+    selector:
+      app: aims-db
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    creationTimestamp: "2023-02-24T00:46:18Z"
+    name: aims-gql
+    namespace: app-name
+    resourceVersion: "131511923"
+    uid: 181eebd3-27db-47d1-b3eb-e698c3951af5
+  spec:
+    clusterIP: 172.30.167.91
+    clusterIPs:
+    - 172.30.167.91
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - port: 5000
+      protocol: TCP
+      targetPort: 5000
+    selector:
+      app: aims-gql
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    creationTimestamp: "2023-02-24T15:57:55Z"
+    name: aims-http
+    namespace: app-name
+    resourceVersion: "132615875"
+    uid: 17a49a39-9653-4311-a800-15a84e429ddf
+  spec:
+    clusterIP: 172.30.43.51
+    clusterIPs:
+    - 172.30.43.51
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - port: 8080
+      protocol: TCP
+      targetPort: 8080
+    selector:
+      app: aims-http
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    creationTimestamp: "2023-02-24T15:28:14Z"
+    name: aims-ws
+    namespace: app-name
+    resourceVersion: "132570026"
+    uid: 306e98a5-fb5c-4c3a-a221-8a38c3d1062d
+  spec:
+    clusterIP: 172.30.217.113
+    clusterIPs:
+    - 172.30.217.113
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - port: 8081
+      protocol: TCP
+      targetPort: 8081
+    selector:
+      app: aims-ws
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    creationTimestamp: "2023-02-24T00:42:35Z"
+    name: comm-db
+    namespace: app-name
+    resourceVersion: "131509565"
+    uid: b92a9a37-bd31-45a0-80ae-23ab33c271d3
+  spec:
+    clusterIP: 172.30.253.107
+    clusterIPs:
+    - 172.30.253.107
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - port: 5432
+      protocol: TCP
+      targetPort: 5432
+    selector:
+      app: comm-db
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    creationTimestamp: "2023-02-24T00:46:29Z"
+    name: comm-gql
+    namespace: app-name
+    resourceVersion: "131511999"
+    uid: f2838d93-810a-4f19-8158-ac57e4d10435
+  spec:
+    clusterIP: 172.30.169.196
+    clusterIPs:
+    - 172.30.169.196
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - port: 5000
+      protocol: TCP
+      targetPort: 5000
+    selector:
+      app: comm-gql
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    creationTimestamp: "2023-02-24T15:28:22Z"
+    name: comm-ws
+    namespace: app-name
+    resourceVersion: "132641083"
+    uid: 122fb2bf-5ccf-4494-a489-7a2e050b8020
+  spec:
+    clusterIP: 172.30.15.181
+    clusterIPs:
+    - 172.30.15.181
+    externalTrafficPolicy: Cluster
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - nodePort: 30303
+      port: 9000
+      protocol: TCP
+      targetPort: 9000
+    selector:
+      app: comm-ws
+    sessionAffinity: None
+    type: NodePort
+  status:
+    loadBalancer: {}
+- apiVersion: route.openshift.io/v1
+  kind: Route
+  metadata:
+    annotations:
+      openshift.io/host.generated: "true"
+    creationTimestamp: "2023-02-24T16:02:45Z"
+    name: aims-gql
+    namespace: app-name
+    resourceVersion: "132619214"
+    uid: e3a750f8-150d-48cf-902a-4d8119547319
+  spec:
+    host: 
+    port:
+      targetPort: 5000
+    to:
+      kind: Service
+      name: aims-gql
+      weight: 100
+    wildcardPolicy: None
+  status:
+    ingress:
+    - conditions:
+      - lastTransitionTime: "2023-02-24T16:02:45Z"
+        status: "True"
+        type: Admitted
+      host: 
+      routerCanonicalHostname: 
+      routerName: default
+      wildcardPolicy: None
+- apiVersion: route.openshift.io/v1
+  kind: Route
+  metadata:
+    annotations:
+      openshift.io/host.generated: "true"
+    creationTimestamp: "2023-02-24T16:05:51Z"
+    name: aims-http
+    namespace: app-name
+    resourceVersion: "132621375"
+    uid: b567b691-a479-459f-8ec2-1c2f753ca73c
+  spec:
+    host: 
+    port:
+      targetPort: 8080
+    to:
+      kind: Service
+      name: aims-http
+      weight: 100
+    wildcardPolicy: None
+  status:
+    ingress:
+    - conditions:
+      - lastTransitionTime: "2023-02-24T16:05:51Z"
+        status: "True"
+        type: Admitted
+      host: 
+      routerCanonicalHostname: 
+      routerName: default
+      wildcardPolicy: None
+- apiVersion: route.openshift.io/v1
+  kind: Route
+  metadata:
+    annotations:
+      openshift.io/host.generated: "true"
+    creationTimestamp: "2023-02-24T16:02:32Z"
+    name: aims-ws
+    namespace: app-name
+    resourceVersion: "132619069"
+    uid: 70e2803c-a5d6-4450-b43a-cf96d247cdac
+  spec:
+    host: 
+    port:
+      targetPort: 8081
+    to:
+      kind: Service
+      name: aims-ws
+      weight: 100
+    wildcardPolicy: None
+  status:
+    ingress:
+    - conditions:
+      - lastTransitionTime: "2023-02-24T16:02:32Z"
+        status: "True"
+        type: Admitted
+      host: 
+      routerCanonicalHostname: 
+      routerName: default
+      wildcardPolicy: None      
+kind: List
+metadata:
+  resourceVersion: ""
+  selfLink: ""
+  
